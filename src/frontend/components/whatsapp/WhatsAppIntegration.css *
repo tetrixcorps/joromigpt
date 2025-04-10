@@ -1,0 +1,44 @@
+/* /src/frontend/components/whatsapp/WhatsAppIntegration.css */
+.whatsapp-integration-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.whatsapp-integration-container h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #075e54;
+}
+
+.whatsapp-integration-container > p {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #666;
+}
+
+.whatsapp-info {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.whatsapp-info h3 {
+  margin-top: 0;
+  color: #075e54;
+}
+
+.whatsapp-info ol {
+  padding-left: 20px;
+}
+
+.whatsapp-info li {
+  margin-bottom: 10px;
+}
+
+.whatsapp-info p {
+  font-style: italic;
+  color: #666;
+  margin-top: 20px;
+}

@@ -1,0 +1,25 @@
+# docker-compose.monitoring.yml
+version: '3.8'
+services:
+  k8s-operator:
+    image: nvcr.io/nvidia/gpu-operator:v24.9.2
+    volumes:
+      - ./k8s:/k8s
+      
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+      
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/etc/grafana
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus

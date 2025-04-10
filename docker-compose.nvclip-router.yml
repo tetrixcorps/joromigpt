@@ -1,0 +1,74 @@
+# docker-compose.nvclip-router.yml
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama_service
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+  nvclip:
+    image: nvcr.io/nim/nvidia/nvclip:2.0.0
+    container_name: nvclip_service
+    ports:
+      - "3456:3456"  # Expose NV-CLIP API port
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./nvclip-models:/workspace/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+  nvclip-adapter:
+    build:
+      context: ./docker/adapters/nvclip-adapter
+      dockerfile: Dockerfile
+    container_name: nvclip_adapter
+    ports:
+      - "8000:8000"  # Expose adapter API
+    depends_on:
+      - nvclip
+    environment:
+      - NVCLIP_URL=http://nvclip:3456
+    networks:
+      - ai_network
+    
+  llm-router:
+    build:
+      context: ./docker/ai-infrastructure/llm-layer/
+      dockerfile: Dockerfile
+    container_name: llm_router
+    ports:
+      - "6060:6060"  # RouteLLM OpenAI-compatible API port
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WEAK_MODEL=ollama_chat/llama3
+      - STRONG_MODEL=gpt-4-1106-preview
+      - NVCLIP_ADAPTER_URL=http://nvclip-adapter:8000
+    depends_on:
+      - ollama
+      - nvclip-adapter
+    command: python -m routellm.openai_server --routers mf --weak-model ollama_chat/llama3 --strong-model gpt-4-1106-preview
+    networks:
+      - ai_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+networks:
+  ai_network:
+    driver: bridge

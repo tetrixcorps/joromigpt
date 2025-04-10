@@ -1,0 +1,27 @@
+# docker-compose.llm-router.yml
+version: '3.8'
+services:
+  llm-router:
+    build:
+      context: ./docker/ai-infrastructure/llm-layer/
+      dockerfile: Dockerfile
+    container_name: llm_router
+    ports:
+      - "6060:6060"  # RouteLLM OpenAI-compatible API port
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WEAK_MODEL=ollama_chat/llama3
+      - STRONG_MODEL=gpt-4-1106-preview
+    depends_on:
+      - ollama
+    command: python -m routellm.openai_server --routers mf --weak-model ollama_chat/llama3 --strong-model gpt-4-1106-preview
+    # Add network configuration to help with DNS resolution
+    networks:
+      - ai_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+networks:
+  ai_network:
+    driver: bridge

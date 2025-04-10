@@ -1,0 +1,25 @@
+/* /src/frontend/pages/Chat.css */
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chat-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.chat-header h1 {
+  color: var(--primary-color);
+  margin-bottom: 5px;
+}
+
+.chat-header p {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.chat-main {
+  flex: 1;
+}

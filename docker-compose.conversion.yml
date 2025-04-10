@@ -1,0 +1,9 @@
+# docker-compose.conversion.yml
+version: '3.8'
+services:
+  model-conversion:
+    image: ubuntu:latest
+    volumes:
+      - ./models:/models
+      - ./scripts:/scripts
+    command: bash /scripts/convert_to_gguf.sh

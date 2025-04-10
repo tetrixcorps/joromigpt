@@ -1,0 +1,319 @@
+version: '3.8'
+services:
+  # 1. NVIDIA Clara BioNeMo Framework
+  clara-bionemo:
+    image: nvcr.io/nvidia/clara/bionemo-framework:nightly
+    container_name: clara_bionemo_framework
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./data/bionemo:/models/clara_bionemo
+    environment:
+      - MODEL_NAME=clara_bionemo_framework
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 2. NVIDIA Riva Speech
+  riva-speech:
+    image: nvcr.io/nvidia/riva/riva-speech:2.19.0
+    container_name: riva_speech
+    ports:
+      - "50051:50051"
+      - "8011:8000"
+    volumes:
+      - ./data/riva:/models/riva_speech
+    environment:
+      - MODEL_NAME=riva_speech
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 3. Apache Kafka
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: kafka_service
+    ports:
+      - "9092:9092"
+      - "2181:2181"
+    volumes:
+      - ./config/kafka:/config/kafka
+    environment:
+      - MODEL_NAME=kafka_service
+      - NVIDIA_VISIBLE_DEVICES=all
+
+  # 4. NVIDIA K8s Device Plugin
+  k8s-device-plugin:
+    image: nvcr.io/nvidia/k8s-device-plugin:v0.17.1-ubi9
+    container_name: k8s_device_plugin
+    privileged: true
+    volumes:
+      - ./config/k8s:/config/k8s_device_plugin
+    environment:
+      - MODEL_NAME=k8s_device_plugin
+      - NVIDIA_VISIBLE_DEVICES=all
+
+  # 5. TensorFlow with Jupyter
+  tensorflow-jupyter:
+    image: tensorflow/tensorflow:latest-gpu-jupyter
+    container_name: tensorflow_jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/notebooks
+    environment:
+      - MODEL_NAME=tensorflow_jupyter
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 6. NVIDIA CUDA (Development Environment)
+  cuda-dev:
+    image: nvcr.io/nvidia/cuda:12.8.1-cudnn-devel-oraclelinux8
+    container_name: cuda_dev_env
+    volumes:
+      - ./data/cuda:/data/cuda_dev_env
+    environment:
+      - MODEL_NAME=cuda_dev_env
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 7. NVIDIA RAPIDS Base
+  rapids-base:
+    image: nvcr.io/nvidia/rapidsai/base:25.02-cuda12.8-py3.12
+    container_name: rapids_base_service
+    ports:
+      - "8012:8000"
+    volumes:
+      - ./data/rapids:/data/rapids_base_service
+    environment:
+      - MODEL_NAME=rapids_base_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 8. NVIDIA NVClip
+  nvclip:
+    image: nvcr.io/nim/nvidia/nvclip:2.0.0
+    container_name: nvclip_service
+    ports:
+      - "8013:8000"
+    volumes:
+      - ./data/nvclip:/data/nvclip_service
+    environment:
+      - MODEL_NAME=nvclip_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 9. NVIDIA Triton Server with TensorRT LLM
+  triton-tensorrt-llm:
+    image: nvcr.io/nvidia/tritonserver:25.02-trtllm-python-py3
+    container_name: triton_tensorrt_llm
+    ports:
+      - "8014:8000"
+      - "8015:8001"
+      - "8016:8002"
+    volumes:
+      - ./data/triton-tensorrt:/models/triton_tensorrt_llm
+    environment:
+      - MODEL_NAME=triton_tensorrt_llm
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 10. NVIDIA Triton Server with VLLM
+  triton-vllm:
+    image: nvcr.io/nvidia/tritonserver:25.02-vllm-python-py3
+    container_name: triton_vllm_service
+    ports:
+      - "8017:8000"
+      - "8018:8001"
+      - "8019:8002"
+    volumes:
+      - ./data/triton-vllm:/models/triton_vllm_service
+    environment:
+      - MODEL_NAME=triton_vllm_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 11. LLaMA 3.2 Instruct
+  llama-3-2-instruct:
+    image: nvcr.io/nim/meta/llama-3.2-3b-instruct:latest
+    container_name: llama_3_2_instruct_service
+    ports:
+      - "8020:8000"
+    volumes:
+      - ./data/llama:/models/llama_3_2_instruct_service
+    environment:
+      - MODEL_NAME=llama_3_2_instruct_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 12. NVIDIA PyTorch
+  pytorch:
+    image: nvcr.io/nvidia/pytorch:25.02-py3
+    container_name: pytorch_service
+    ports:
+      - "8021:8080"
+    volumes:
+      - ./data/pytorch:/models/pytorch_service
+    environment:
+      - MODEL_NAME=pytorch_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 13. NVIDIA DeepStream with Triton
+  deepstream-triton:
+    image: nvcr.io/nvidia/deepstream:7.1-triton-multiarch
+    container_name: deepstream_triton_service
+    ports:
+      - "8022:8080"
+    volumes:
+      - ./config/deepstream:/configs/deepstream_triton_service
+    environment:
+      - MODEL_NAME=deepstream_triton_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 14. NVIDIA TAO Toolkit (API Version)
+  tao-toolkit:
+    image: nvcr.io/nvidia/tao/tao-toolkit:5.5.0-api
+    container_name: tao_toolkit_api_version_service
+    ports:
+      - "8024:8080"
+    volumes:
+      - ./data/tao/data:/data/tao_toolkit_api_version_service
+      - ./data/tao/models:/app/models
+      - ./data/tao/results:/app/results
+    environment:
+      - MODEL_NAME=tao_toolkit_api_version_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 15. NVIDIA Merlin HugeCTR
+  merlin-hugectr:
+    image: nvcr.io/nvidia/merlin/merlin-hugectr:nightly
+    container_name: merlin_hugectr_service
+    ports:
+      - "8025:8080"
+    volumes:
+      - ./data/merlin:/data/merlin_hugectr
+    environment:
+      - MODEL_NAME=merlin_hugectr_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  # 16. NVIDIA LLaMA Content Safety
+  llama-content-safety:
+    image: nvcr.io/nim/nvidia/llama-3.1-nemoguard-8b-content-safety:latest
+    container_name: llama_content_safety_service
+    ports:
+      - "8026:8000"
+    volumes:
+      - ./data/content-safety:/data/llama_content_safety
+    environment:
+      - MODEL_NAME=llama_content_safety_service
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["all"]
+              capabilities: [gpu]
+
+  llm-layer:
+    build:
+      context: .
+      dockerfile: docker/ai-infrastructure/llm-layer/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - STRONG_MODEL=gpt-4
+      - WEAK_MODEL=mistralai/Mixtral-8x7B-Instruct-v0.1
+      - DEFAULT_ROUTER=mf
+      - DEFAULT_THRESHOLD=0.11593
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANYSCALE_API_KEY=${ANYSCALE_API_KEY}
+    volumes:
+      - ./config:/app/config
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

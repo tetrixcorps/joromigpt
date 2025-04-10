@@ -1,0 +1,20 @@
+# Add to docker-compose.yml, docker-compose.dev.yml, etc.
+rapids-processing:
+  build:
+    context: .
+    dockerfile: docker/ai-infrastructure/hpc-layer/Dockerfile
+  ports:
+    - "7500:7500"
+  env_file:
+    - config/dev/rapids-processing.env  # Create this file
+  volumes:
+    - ./data:/app/data
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
+  depends_on:
+    - web-layer

@@ -1,0 +1,114 @@
+version: '3.8'
+services:
+  web-layer:
+    build:
+      context: .
+      dockerfile: docker/ai-infrastructure/web-layer/Dockerfile
+      args:
+        - BUILD_ENV=production
+    ports:
+      - "8080:8080"
+    env_file:
+      - config/production/web-layer.env
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - llm-layer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  llm-layer:
+    build:
+      context: .
+      dockerfile: docker/ai-infrastructure/llm-layer/Dockerfile
+      args:
+        - MODEL_VERSION=production
+        - OPTIMIZATION_LEVEL=3
+    ports:
+      - "5000:5000"
+    env_file:
+      - config/production/llm-layer.env
+    volumes:
+      - llm-models:/app/model_registry
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [gpu]
+
+  mcp-layer:
+    build:
+      context: .
+      dockerfile: docker/ai-infrastructure/mcp-layer/Dockerfile
+    ports:
+      - "6000:6000"
+    env_file:
+      - config/production/mcp-layer.env
+    depends_on:
+      - training-layer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  training-layer:
+    build:
+      context: .
+      dockerfile: docker/ai-infrastructure/training-layer/Dockerfile
+    ports:
+      - "7000:7000"
+    env_file:
+      - config/production/training-layer.env
+    volumes:
+      - training-data:/app/data
+      - model-checkpoints:/app/checkpoints
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  hpc-layer:
+    build:
+      context: .
+      dockerfile: docker/ai-infrastructure/hpc-layer/Dockerfile
+    env_file:
+      - config/production/hpc-layer.env
+    volumes:
+      - data-processing:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  llm-models:
+  training-data:
+  model-checkpoints:
+  data-processing:

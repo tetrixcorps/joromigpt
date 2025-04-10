@@ -1,0 +1,21 @@
+# docker-compose.inference.yml
+version: '3.8'
+services:
+  triton-server:
+    image: nvcr.io/nvidia/tritonserver:25.02-trtllm-python-py3
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+    volumes:
+      - ./models:/models
+      - ./triton-model-repo:/model_repository
+    command: tritonserver --model-repository=/model_repository
+    
+  vllm-backend:
+    image: nvcr.io/nvidia/tritonserver:25.02-vllm-python-py3
+    volumes:
+      - ./models:/models
+      - ./scripts:/scripts
+    depends_on:
+      - triton-server

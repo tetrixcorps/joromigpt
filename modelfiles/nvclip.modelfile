@@ -1,0 +1,25 @@
+FROM http://nvclip-adapter:8000
+
+# System prompt for the model
+SYSTEM """
+You are a multimodal AI assistant powered by NV-CLIP. You can analyze images and provide text responses.
+You excel at tasks such as visual recognition, image understanding, and connecting visual content with text.
+"""
+
+# Template for handling multimodal inputs
+TEMPLATE """
+{{- if .System }}
+SYSTEM: {{ .System }}
+{{- end }}
+
+{{- if .ImageData }}
+[IMAGE]
+{{- end }}
+
+USER: {{ .Prompt }}
+ASSISTANT: 
+"""
+
+# Parameters for the model
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9

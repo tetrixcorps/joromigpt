@@ -1,0 +1,21 @@
+/* /src/frontend/components/chat/ChatInterface.css */
+.chat-interface {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.loading-indicator {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: rgba(52, 152, 219, 0.1);
+  border-radius: var(--border-radius);
+  margin: 10px;
+}

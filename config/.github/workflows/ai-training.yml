@@ -1,0 +1,204 @@
+name: AI Model Training Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_type:
+        description: 'Type of model to train'
+        required: true
+        default: 'asr'
+        type: choice
+        options:
+          - asr
+          - tts
+          - translation
+          - llm
+      language:
+        description: 'Target African language'
+        required: true
+        type: choice
+        options:
+          - swahili
+          - yoruba
+          - igbo
+          - hausa
+          - amharic
+          - zulu
+          - xhosa
+      dataset_name:
+        description: 'Dataset name'
+        required: true
+        type: string
+        default: 'common_voice'
+      epochs:
+        description: 'Number of training epochs'
+        required: true
+        type: number
+        default: 10
+      batch_size:
+        description: 'Batch size for training'
+        required: true
+        type: number
+        default: 32
+
+jobs:
+  prepare-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      model_dir: ${{ steps.set-model-dir.outputs.model_dir }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set model directory
+        id: set-model-dir
+        run: echo "model_dir=models/${{ github.event.inputs.model_type }}/${{ github.event.inputs.language }}" >> $GITHUB_OUTPUT
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r src/backend/requirements.txt
+          pip install -r docker/ai-infrastructure/training-layer/requirements.txt
+
+  data-preparation:
+    needs: prepare-environment
+    runs-on: ubuntu-latest
+    container:
+      image: nvcr.io/nvidia/nemo:23.06
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Download and prepare dataset
+        run: |
+          python src/backend/ai/training/data_preparation.py \
+            --model-type ${{ github.event.inputs.model_type }} \
+            --language ${{ github.event.inputs.language }} \
+            --dataset ${{ github.event.inputs.dataset_name }} \
+            --output-dir data/${{ github.event.inputs.model_type }}/${{ github.event.inputs.language }}
+      
+      - name: Upload dataset artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: processed-dataset
+          path: data/${{ github.event.inputs.model_type }}/${{ github.event.inputs.language }}
+
+  model-training:
+    needs: [prepare-environment, data-preparation]
+    runs-on: self-hosted
+    container:
+      image: nvcr.io/nvidia/nemo:23.06
+      options: --gpus all --shm-size=16g
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Download processed dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: processed-dataset
+          path: data/${{ github.event.inputs.model_type }}/${{ github.event.inputs.language }}
+      
+      - name: Train model
+        run: |
+          python src/backend/ai/training/trainer.py \
+            --model-type ${{ github.event.inputs.model_type }} \
+            --language ${{ github.event.inputs.language }} \
+            --data-dir data/${{ github.event.inputs.model_type }}/${{ github.event.inputs.language }} \
+            --output-dir ${{ needs.prepare-environment.outputs.model_dir }} \
+            --epochs ${{ github.event.inputs.epochs }} \
+            --batch-size ${{ github.event.inputs.batch_size }} \
+            --config configs/ai/${{ github.event.inputs.model_type }}/training_config.yaml
+      
+      - name: Upload model checkpoint
+        uses: actions/upload-artifact@v3
+        with:
+          name: model-checkpoint
+          path: ${{ needs.prepare-environment.outputs.model_dir }}/checkpoints
+
+  model-evaluation:
+    needs: [prepare-environment, model-training]
+    runs-on: self-hosted
+    container:
+      image: nvcr.io/nvidia/nemo:23.06
+      options: --gpus all
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Download model checkpoint
+        uses: actions/download-artifact@v3
+        with:
+          name: model-checkpoint
+          path: ${{ needs.prepare-environment.outputs.model_dir }}/checkpoints
+      
+      - name: Download processed dataset
+        uses: actions/download-artifact@v3
+        with:
+          name: processed-dataset
+          path: data/${{ github.event.inputs.model_type }}/${{ github.event.inputs.language }}
+      
+      - name: Evaluate model
+        run: |
+          python src/backend/ai/training/evaluate.py \
+            --model-type ${{ github.event.inputs.model_type }} \
+            --language ${{ github.event.inputs.language }} \
+            --model-dir ${{ needs.prepare-environment.outputs.model_dir }} \
+            --test-data data/${{ github.event.inputs.model_type }}/${{ github.event.inputs.language }}/test \
+            --output-file ${{ needs.prepare-environment.outputs.model_dir }}/evaluation_results.json
+      
+      - name: Upload evaluation results
+        uses: actions/upload-artifact@v3
+        with:
+          name: evaluation-results
+          path: ${{ needs.prepare-environment.outputs.model_dir }}/evaluation_results.json
+
+  model-deployment:
+    needs: [prepare-environment, model-evaluation]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Download model checkpoint
+        uses: actions/download-artifact@v3
+        with:
+          name: model-checkpoint
+          path: ${{ needs.prepare-environment.outputs.model_dir }}/checkpoints
+      
+      - name: Download evaluation results
+        uses: actions/download-artifact@v3
+        with:
+          name: evaluation-results
+          path: ${{ needs.prepare-environment.outputs.model_dir }}
+      
+      - name: Convert model for inference
+        run: |
+          python src/backend/ai/inference/convert_model.py \
+            --model-type ${{ github.event.inputs.model_type }} \
+            --checkpoint ${{ needs.prepare-environment.outputs.model_dir }}/checkpoints/best_model.ckpt \
+            --output-dir ${{ needs.prepare-environment.outputs.model_dir }}/inference
+      
+      - name: Deploy model to production
+        run: |
+          python scripts/deployment/deploy_model.py \
+            --model-type ${{ github.event.inputs.model_type }} \
+            --language ${{ github.event.inputs.language }} \
+            --model-dir ${{ needs.prepare-environment.outputs.model_dir }}/inference \
+            --environment prod
+      
+      - name: Send notification
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "New ${{ github.event.inputs.model_type }} model for ${{ github.event.inputs.language }} has been deployed to production!"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

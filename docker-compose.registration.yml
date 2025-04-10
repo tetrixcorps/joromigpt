@@ -1,0 +1,10 @@
+# docker-compose.registration.yml
+version: '3.8'
+services:
+  ollama-registration:
+    image: ubuntu:latest
+    volumes:
+      - ./models:/models
+      - ./scripts:/scripts
+      - ~/.ollama:/root/.ollama
+    command: bash /scripts/register_model.sh

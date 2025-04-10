@@ -1,0 +1,15 @@
+/* /src/frontend/components/common/LanguageSelector.css */
+.language-selector-component {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.language-selector-component select {
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  background-color: white;
+  font-size: 14px;
+}

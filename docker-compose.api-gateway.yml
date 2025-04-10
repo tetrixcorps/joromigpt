@@ -1,0 +1,22 @@
+# docker-compose.api-gateway.yml
+version: '3.8'
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway/Dockerfile
+    container_name: api_gateway
+    ports:
+      - "8888:8888"  # Main API Gateway port
+    environment:
+      - INFERENCE_ENDPOINT=http://triton-server:8000
+      - TRAINING_ENDPOINT=http://pytorch-training:7000
+      - DATA_PROCESSING_ENDPOINT=http://rapids-processing:7500
+      - ASR_ENDPOINT=http://riva-asr:8001
+      - TTS_ENDPOINT=http://riva-tts:8002
+    depends_on:
+      - triton-server
+      - pytorch-training
+      - rapids-processing
+      - riva-asr
+      - riva-tts

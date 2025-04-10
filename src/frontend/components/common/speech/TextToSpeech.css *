@@ -1,0 +1,6 @@
+/* /src/frontend/components/speech/TextToSpeech.css */
+.text-to-speech {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
